@@ -1,0 +1,27 @@
+{
+    "name": "Tweening Extension",
+    "description": "",
+    "dependencies": {
+        "device": "*",
+        "Vector2 Extension": "github:arandomjuyongithub/pxt-vector2#v1.1.0"
+    },
+    "files": [
+        "main.blocks",
+        "main.ts",
+        "README.md",
+        "assets.json",
+        "custom.ts",
+        "main.py"
+    ],
+    "testFiles": [
+        "test.ts"
+    ],
+    "targetVersions": {
+        "target": "1.12.59",
+        "targetId": "arcade"
+    },
+    "supportedTargets": [
+        "arcade"
+    ],
+    "preferredEditor": "blocksprj"
+}
