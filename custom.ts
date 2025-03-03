@@ -14,6 +14,7 @@ function switchArrayLocation(item: any, currentArray: any[], newArray: any[]): v
 type EasingFunction = (progress: number) => number;
 
 // Variables used in some of the tweening functions
+// May make them customizable in the future
 const PI = Math.PI;
 const c1 = 1.70158;
 const c2 = c1 * 1.525;
@@ -217,11 +218,21 @@ const easingsFunctions: EasingFunction[][] = [
     ]
 ];
 
+
+
+//% blockNamespace=tweenExtension
+//% group="Create"
+
 enum TweenState {
+    //% block="Idle"
     Idle,
+    //% block="playing"
     Playing,
+    //% block="paused"
     Paused,
+    //% block="canceled"
     Canceled,
+    //% block="compleate"
     Complete
 }
 
@@ -270,7 +281,7 @@ enum ContainerTypes {
 
 
 // handler type
-type Handler = (tween: Tween, state: TweenState) => void;
+type Handler = (tween: Tween, reachedEnd: boolean) => void;
 
 // was supposed to be a class for handling events. it didn't work out
 // class Event<T, S> {
@@ -344,9 +355,9 @@ class TweenGoal {
 //% blockNamespace=tweenExtension
 class Tween {
     // Tween properties
-    public readonly instance: Sprite | Vector2Container | NumberContainer // the thing being tweened
-    public readonly info: TweenInfo // information about the tween
-    public readonly goals: TweenGoal | Vector2 | number // where the tween is going
+    private instance: Sprite | Vector2Container | NumberContainer // the thing being tweened
+    private info: TweenInfo // information about the tween
+    private goals: TweenGoal | Vector2 | number // where the tween is going
     private originalValue: Vector2[] | Vector2 | number
     private linearConstant: number = 0.033 // deteremines the speed of the tween
     private linearProgression: number = 0 // keeps track of the tween's progress
@@ -452,7 +463,7 @@ class Tween {
                         }
                         switchArrayLocation(tween, Tween.playingTweens, Tween.completedTweens)
                         tween.state = TweenState.Complete
-                        tween.fire(TweenState.Complete)
+                        tween.fire(true)
                     } else {
                         tween.linearProgression = Math.clamp(0, 1, tween.linearProgression + tween.linearConstant)
                     }
@@ -466,7 +477,6 @@ class Tween {
     //% weight=94
     //% group="Functions"
     play() {
-        console.log("called")
         if (this.instance instanceof Sprite && this.goals instanceof TweenGoal) {
             // make array
             let vector2Array: Vector2[] = []
@@ -483,21 +493,30 @@ class Tween {
             throw ("failed for some reason")
         }
         // play
+        console.log(Tween.idleTweens)
         switchArrayLocation(this, Tween.idleTweens, Tween.playingTweens)
+        this.state = TweenState.Playing
+    }
+
+    //% block="The current state of $this"
+    //% this.shadow="variables_get" this.defl="tween"
+    //% weight=94
+    //% group="Properties"
+    public getState(): TweenState {
+        return this.state
     }
 
     // fires all the handlers in the state changed Event
     // I plan to add more events latter
-    private fire(state: TweenState) {
+    private fire(reachedEnd: boolean) {
         for (let handler of Tween.handlers) {
-            console.log(Tween.handlers.length)
-            handler(this, state)
+            handler(this, reachedEnd)
         }
     }
 
 }
 
-//% groups='["Create", "Functions", "Events"]'
+//% groups='["Create", "Functions", "Events", "Properties", "Enums"]'
 //% weight=100 color=#0fbc11
 namespace tweenExtension {
     //% block="new tween object $instance, $info, $goals"
@@ -580,8 +599,10 @@ namespace tweenExtension {
 
     //% block="new tween info||for a tween that has, in seconds, a length of $length|has an easingstyle of $easingStyle|has an easingDirction of $easingDirection"
     //% blockSetVariable="tweenInfo"
+    //% inlineInputMode=external
     //% expandableArgumentMode="enabled"
     //% length.defl=1
+    //% easingStyle.defl=EasingStyle.Linear
     //% easingDirection.defl=EasingDirection.NotApplicable
     //% weight=98
     //% group="Create"
@@ -591,6 +612,7 @@ namespace tweenExtension {
 
     //% block="new tween info||for a tween that has, in seconds, a length of $length|has an easingstyle of $easingStyle|has an easingDirction of $easingDirection"
     //% blockAliasFor="tweenExtension.createTweenInfo"
+    //% inlineInputMode=external
     //% expandableArgumentMode="enabled"
     //% length.defl=1
     //% easingStyle.defl=EasingStyle.Linear
@@ -611,66 +633,61 @@ namespace tweenExtension {
 
     //% block="A new tween goal"
     //% blockAliasFor="tweenExtension.createTweenGoal"
+    //% blockGap=30
     //% weight=95
     //% group="Create"
     export function __createTweenGoal() {
         return new TweenGoal
     }
 
-    //% block="A new $containerType container with a value of $value"
-    //% blockSetVariable="container"
-    //% value.shadow="variables_get" value.defl="value"
+    //% block="A new number container with a value of $value"
+    //% blockSetVariable="number"
     //% weight=94
     //% group="Create"
-    export function createContainer(containerType: ContainerTypes, value: Vector2 | number) {
-        switch (containerType) {
-            case ContainerTypes.Vector2:
-                if (!(value instanceof Vector2)) {
-                    throw"value does not match the type of container type"
-                } else {
-                    return new Vector2Container(value)
-                }
-                break;
-            case ContainerTypes.Number:
-                if (!(typeof value == "number")) {
-                    throw "value does not match the type of container type"
-                } else {
-                    return new NumberContainer(value)
-                }
-                break;
-        }
+    export function createNumberContainer(value: number) {
+        return new NumberContainer(value)
     }
 
-    //% block="A new $containerType container with a value of $value"
-    //% blockAliasFor="tweenExtension.createContainer"
-    //% value.shadow="variables_get" value.defl="value"
+    //% block="A new number container with a value of $value"
+    //% blockAliasFor="tweenExtension.createNumberContainer"
     //% weight=93
     //% group="Create"
-    export function __createContainer(containerType: ContainerTypes, value: Vector2 | number): Vector2Container | NumberContainer {
-        switch (containerType) {
-            case ContainerTypes.Vector2:
-                if (!(value instanceof Vector2)) {
-                    throw "value does not match the type of container type"
-                } else {
-                    return new Vector2Container(value)
-                }
-                break;
-            case ContainerTypes.Number:
-                if (!(typeof value == "number")) {
-                    throw "value does not match the type of container type"
-                } else {
-                    return new NumberContainer(value)
-                }
-                break;
-        }
+    export function _createNumberContainer(value: number) {
+        return new NumberContainer(value)
     }
+
+    //% block="A new vector container with a value of $value"
+    //% blockSetVariable="vector"
+    //% value.shadow="variables_get" value.defl="value"
+    //% weight=92
+    //% group="Create"
+    export function createVectorContainer(value: Vector2) {
+        return new Vector2Container(value)
+    }
+
+    //% block="A new vector container with a value of $value"
+    //% blockAliasFor="tweenExtension.createVectorContainer"
+    //% value.shadow="variables_get" value.defl="value"
+    //% weight=91
+    //% group="Create"
+    export function _createVectorContainer(value: Vector2) {
+        return new Vector2Container(value)
+    }
+
     // Tween.play()
 
     //% block="When the state of $tween changes to $state"
     //% draggableParameters
-    //% weight=94
+    //% weight=91
     //% group="Events"
-    export function onStateChanged(handler: (tween: Tween, state: TweenState) => void) {
+    export function onCompleated(handler: (tween: Tween, reachedEnd: boolean) => void) {
         Tween.handlers.push(handler)
+    }
+
+    //% block="$state"
+    //% weight=94
+    //% group="Enums"
+    export function tweenState(state: TweenState) {
+        return state
     }
 }

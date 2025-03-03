@@ -1,6 +1,6 @@
 // tests go here; this will not be compiled when this package is used as an extension.
 
-tweenExtension.onStateChanged(function (tween, state) {
+tweenExtension.onCompleated(function (tween, reachedEnd) {
     if (tween != tweenObject) {
         tweenObject.play()
     }
@@ -32,7 +32,7 @@ let tweenGoal = tweenExtension.createTweenGoal()
 let tweenGoal2 = tweenExtension.createTweenGoal()
 tweenGoal.position = vectors.create(100, 50)
 tweenGoal2.position = vectors.create(10, 50)
-let con = tweenExtension.createContainer(ContainerTypes.Number, 5)
+let con = tweenExtension.createNumberContainer(5)
 tweenObject = tweenExtension.createTween(mySprite, tweenInfo2, tweenGoal2)
 let tween1 = tweenExtension.createTween(mySprite, tweenInfo, tweenGoal)
 tween1.play()
