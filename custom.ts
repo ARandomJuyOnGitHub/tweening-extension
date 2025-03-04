@@ -297,7 +297,10 @@ type Handler = (tween: Tween, reachedEnd: boolean) => void;
 // }
 
 // classes used to store specfic data types. Needed so that they can been tweened (is "tweened" even a word?).
+//% blockNamespace=tweenExtension
 class Vector2Container {
+    //% group="Properties"
+    //% blockCombine
     value: Vector2
 
     constructor(_value: Vector2) {
@@ -305,7 +308,10 @@ class Vector2Container {
     }
 }
 
+//% blockNamespace=tweenExtension
 class NumberContainer {
+    //% group="Properties"
+    //% blockCombine
     value: number
 
     constructor(_value: number) {
@@ -336,7 +342,7 @@ class TweenInfo {
 //% blockNamespace=tweenExtension
 class TweenGoal {
     // order matters, dont change the order of the properties
-    //% group="Create"
+    //% group="Properties"
     //% blockCombine
     position?: Vector2
     //% blockCombine
@@ -350,6 +356,7 @@ class TweenGoal {
 
     chosenProperties: { spritePropertyIndex: number, value: Vector2 }[]
 }
+let time: number = 0
 
 // where all the magic happens
 //% blockNamespace=tweenExtension
@@ -366,6 +373,7 @@ class Tween {
     // where all of the tweens are stored
     private static idleTweens: Tween[] = []
     private static playingTweens: Tween[] = []
+    private static pausedTweens: Tween[] = []
     private static completedTweens: Tween[] = []
 
     // boolen that prevents the tweenloop function from being called more than once
@@ -389,9 +397,76 @@ class Tween {
         Tween.idleTweens.push(this)
     }
 
+    //% block="play $this"
+    //% this.shadow="variables_get" this.defl="tween"
+    //% weight=94
+    //% group="Functions"
+    play() {
+        if (this.state == TweenState.Paused)
+        {
+            switchArrayLocation(this, Tween.pausedTweens, Tween.playingTweens)
+            return
+        } else if (this. state == TweenState.Playing) {
+            console.warn("The Tween is already playing!")
+            return
+        }
+        
+
+        if (this.instance instanceof Sprite && this.goals instanceof TweenGoal) {
+            // make array
+            let vector2Array: Vector2[] = []
+            // use the spritePropertyIndex property of each chosen property to obtain the original/starting value of the property
+            for (let goalInformation of this.goals.chosenProperties) {
+                vector2Array.push(vectors.spritePropertyToVector(this.instance, goalInformation.spritePropertyIndex))
+            }
+            this.originalValue = vector2Array
+        } else if ((this.instance instanceof Vector2Container && this.goals instanceof Vector2) || (this.instance instanceof NumberContainer && typeof this.goals == "number")) {
+            // the original value is a single vector (or a number) rather than an array of vectors (your only tweening one value)
+            this.originalValue = this.instance.value
+        } else {
+            // lets hope this never happens
+            throw ("failed for some reason")
+        }
+        // play
+        switchArrayLocation(this, Tween.idleTweens, Tween.playingTweens)
+        this.state = TweenState.Playing
+        time = game.runtime()
+    }
+
+    //% block="pause $this"
+    //% this.shadow="variables_get" this.defl="tween"
+    //% weight=93
+    //% group="Functions"
+    pause() {
+        if (this.state != TweenState.Playing) 
+        {
+            throw ("tween must be playing to be paused!")
+        
+        }
+
+        switchArrayLocation(this, Tween.playingTweens, Tween.pausedTweens)
+        this.state = TweenState.Paused
+    }
+
+    //% block="The current state of $this"
+    //% this.shadow="variables_get" this.defl="tween"
+    //% weight=94
+    //% group="Properties"
+    public getState(): TweenState {
+        return this.state
+    }
+
+    // fires all the handlers in the state changed Event
+    // I plan to add more events latter
+    private fire(reachedEnd: boolean) {
+        for (let handler of Tween.handlers) {
+            handler(this, reachedEnd)
+        }
+    }
+
     // where the tweens occur
     private static tweenLoop() {
-        forever(function () {
+        game.onUpdate(function () {
             if (Tween.playingTweens.length < 0) { return }
             for (let tween of Tween.playingTweens) {
                 // what to do if tweening a vector --------------------------------------------------------------------------------------------------
@@ -414,7 +489,7 @@ class Tween {
                     } else {
                         tween.linearProgression = Math.clamp(0, 1, tween.linearProgression + tween.linearConstant)
                     }
-                // what to do if tweening a number
+                    // what to do if tweening a number
                 } else if (tween.instance instanceof NumberContainer && typeof tween.originalValue == "number" && typeof tween.goals == "number") {
                     if (tween.info.easingSytle == EasingStyle.Linear && tween.info.easingDirection == EasingDirection.NotApplicable) {
                         tween.instance.value = lerp(tween.originalValue, tween.goals, tween.linearProgression)
@@ -434,7 +509,7 @@ class Tween {
                     } else {
                         tween.linearProgression = Math.clamp(0, 1, tween.linearProgression + tween.linearConstant)
                     }
-                // what to do if tweening a sprite's properties ------------------------------------------------------------------------------------------------
+                    // what to do if tweening a sprite's properties ------------------------------------------------------------------------------------------------
                 } else if (tween.instance instanceof Sprite && !(tween.originalValue instanceof Vector2 || typeof tween.originalValue == "number") && tween.goals instanceof TweenGoal) {
                     // get the progression value for the appropriate tweening function and style
                     let tweenedTime = 0
@@ -443,7 +518,7 @@ class Tween {
                     } else {
                         tweenedTime = easingsFunctions[tween.info.easingSytle][tween.info.easingDirection](tween.linearProgression)
                     }
-            
+
                     // loop through all chosenProperties
                     for (let property of tween.goals.chosenProperties) {
                         // get the index of current chosen property
@@ -464,6 +539,8 @@ class Tween {
                         switchArrayLocation(tween, Tween.playingTweens, Tween.completedTweens)
                         tween.state = TweenState.Complete
                         tween.fire(true)
+                        console.log("THIS IS TIME")
+                        console.log(game.runtime() - time)
                     } else {
                         tween.linearProgression = Math.clamp(0, 1, tween.linearProgression + tween.linearConstant)
                     }
@@ -471,49 +548,6 @@ class Tween {
             }
         })
     }
-
-    //% block="play $this"
-    //% this.shadow="variables_get" this.defl="tween"
-    //% weight=94
-    //% group="Functions"
-    play() {
-        if (this.instance instanceof Sprite && this.goals instanceof TweenGoal) {
-            // make array
-            let vector2Array: Vector2[] = []
-            // use the spritePropertyIndex property of each chosen property to obtain the original/starting value of the property
-            for (let goalInformation of this.goals.chosenProperties) {
-                vector2Array.push(vectors.spritePropertyToVector(this.instance, goalInformation.spritePropertyIndex))
-            }
-            this.originalValue = vector2Array
-        } else if ((this.instance instanceof Vector2Container && this.goals instanceof Vector2) || (this.instance instanceof NumberContainer && typeof this.goals == "number")) {
-            // the original value is a single vector (or a number) rather than an array of vectors (your only tweening one value)
-            this.originalValue = this.instance.value
-        } else {
-            // lets hope this never happens
-            throw ("failed for some reason")
-        }
-        // play
-        console.log(Tween.idleTweens)
-        switchArrayLocation(this, Tween.idleTweens, Tween.playingTweens)
-        this.state = TweenState.Playing
-    }
-
-    //% block="The current state of $this"
-    //% this.shadow="variables_get" this.defl="tween"
-    //% weight=94
-    //% group="Properties"
-    public getState(): TweenState {
-        return this.state
-    }
-
-    // fires all the handlers in the state changed Event
-    // I plan to add more events latter
-    private fire(reachedEnd: boolean) {
-        for (let handler of Tween.handlers) {
-            handler(this, reachedEnd)
-        }
-    }
-
 }
 
 //% groups='["Create", "Functions", "Events", "Properties", "Enums"]'

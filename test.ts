@@ -1,10 +1,11 @@
 // tests go here; this will not be compiled when this package is used as an extension.
 
 tweenExtension.onCompleated(function (tween, reachedEnd) {
-    if (tween != tweenObject) {
-        tweenObject.play()
-    }
+    // if (tween != tweenObject) {
+    //     tweenObject.play()
+    // }
 })
+
 let tweenObject: Tween = null
 let item = 0
 let mySprite = sprites.create(img`
@@ -36,3 +37,9 @@ let con = tweenExtension.createNumberContainer(5)
 tweenObject = tweenExtension.createTween(mySprite, tweenInfo2, tweenGoal2)
 let tween1 = tweenExtension.createTween(mySprite, tweenInfo, tweenGoal)
 tween1.play()
+// timer.after(900, function() {
+//     tween1.pause()
+//     timer.after(1000, function() {
+//         tween1.play()
+//     })
+// })

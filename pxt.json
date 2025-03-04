@@ -3,7 +3,8 @@
     "description": "",
     "dependencies": {
         "device": "*",
-        "Vector2 Extension": "github:arandomjuyongithub/pxt-vector2#v1.1.0"
+        "Vector2 Extension": "github:arandomjuyongithub/pxt-vector2#v1.1.0",
+        "Timers": "github:microsoft/arcade-timers#v1.1.0"
     },
     "files": [
         "main.blocks",
